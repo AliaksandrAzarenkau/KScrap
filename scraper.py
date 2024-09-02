@@ -9,9 +9,13 @@ coffee_item_links = []
 
 async def scrape_all(url):
     r = requests.get(url)
-    nb_response = r.json()
 
-    return nb_response
+    try:
+        nb_response = r.json()
+        return nb_response
+    except Exception as e:
+        print(e)
+        return []
 
 
 async def create_my_nb_item_links(response) -> list:
