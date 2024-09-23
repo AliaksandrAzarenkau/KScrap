@@ -19,27 +19,40 @@ async def scrape_all(url):
 
 
 async def create_my_nb_item_links(response) -> list:
-    for ads in response['ads']:
-        nb_item_links.append(ads['ad_link'])
+    try:
+        for ads in response['ads']:
+            nb_item_links.append(ads['ad_link'])
 
-    new_items = my_nb_items_register(nb_item_links)
+        new_items = my_nb_items_register(nb_item_links)
+
+    except Exception as e:
+        print(e)
+        new_items = []
 
     return new_items
 
 
 async def create_horse_tv_item_links(response) -> list:
-    for ads in response['ads']:
-        horse_tv_item_links.append(ads['ad_link'])
+    try:
+        for ads in response['ads']:
+            horse_tv_item_links.append(ads['ad_link'])
 
-    new_items = horse_tv_items_register(horse_tv_item_links)
+        new_items = horse_tv_items_register(horse_tv_item_links)
+    except Exception as e:
+        print(e)
+        new_items = []
 
     return new_items
 
 
 async def create_coffee_item_links(response) -> list:
-    for ads in response['ads']:
-        coffee_item_links.append(ads['ad_link'])
+    try:
+        for ads in response['ads']:
+            coffee_item_links.append(ads['ad_link'])
 
-    new_items = coffee_items_register(coffee_item_links)
+        new_items = coffee_items_register(coffee_item_links)
+    except Exception as e:
+        print(e)
+        new_items = []
 
     return new_items
