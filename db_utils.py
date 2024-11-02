@@ -1,16 +1,18 @@
 import sqlite3
 
+
 connection = sqlite3.connect('database.db', check_same_thread=False)
 cursor = connection.cursor()
 
 
 def db_user_create():
+    """
+    Creates the users table
+    """
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS user (
     id INTEGER PRIMARY KEY,
     tg_id INTEGER,
-    first_name TEXT NOT NULL,
-    last_name TEXT,
     UNIQUE(id, tg_id)
     )
     ''')
@@ -18,115 +20,157 @@ def db_user_create():
     connection.commit()
 
 
-def db_my_notebooks_create():
+def db_subscription_create():
+    """
+    Creates the subscriptions table
+    """
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS notebook (
+    CREATE TABLE IF NOT EXISTS subscription (
     id INTEGER PRIMARY KEY,
-    nb_url TEXT NOT NULL,
-    UNIQUE(id, nb_url)
+    telegram_id INTEGER,
+    region INTEGER NOT NULL,
+    decode_keywords TEXT NOT NULL,
+    keywords TEXT NOT NULL,
+    UNIQUE(id)
     )
     ''')
 
     connection.commit()
 
 
-def db_my_coffee_create():
+def db_items_create():
+    """
+    Creates the items(url to items) table
+    """
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS coffee (
+    CREATE TABLE IF NOT EXISTS item (
     id INTEGER PRIMARY KEY,
-    item_url TEXT NOT NULL,
-    UNIQUE(id, item_url)
+    telegram_id INTEGER,
+    url TEXT NOT NULL,
+    UNIQUE(id)
     )
     ''')
 
     connection.commit()
 
 
-def db_horse_tv_create():
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS tv (
-    id INTEGER PRIMARY KEY,
-    tv_url TEXT NOT NULL,
-    UNIQUE(id, tv_url)
-    )
-    ''')
-
-    connection.commit()
-
-
-def user_register(user_data: dict) -> None:
-    cursor.execute('SELECT tg_id FROM users WHERE tg_id = ?', (user_data['user_id'],))
+def user_register(user_data: int) -> None:
+    """
+    Users register or ignore existing user
+    """
+    cursor.execute('SELECT tg_id FROM user WHERE tg_id = ?', (user_data,))
     user = cursor.fetchone()
 
     if not user:
         cursor.execute(
-            'INSERT OR IGNORE INTO Users (tg_id, first_name, last_name) VALUES (?, ?, ?)',
-            (
-                user_data['user_id'],
-                user_data['user_first_name'],
-                user_data['user_last_name']))
+            'INSERT OR IGNORE INTO user (tg_id) VALUES (?)',
+            (user_data,))
 
     connection.commit()
 
 
-def my_nb_items_register(items: list) -> list:
-    current_list = []
-    new_items_list = []
+def subscription_register(reg: str, dkw: str, kw: str, tg_id: int) -> None | str:
+    """
+    Register or ignore existing subscription
+    :param reg: region
+    :param dkw: keyword to search
+    :param kw: keyword in URL_lang
+    :param tg_id: telegram id
+    :return: None
+    """
+    try:
+        cursor.execute('SELECT (keywords) FROM subscription WHERE (telegram_id = ?)',
+                       (tg_id,))
+        subscription = cursor.fetchall()
+        for _ in subscription:
+            if kw in _:
+                return 'Такая подписка уже активна'
 
-    cursor.execute('SELECT * FROM notebook', )
-    item_list = cursor.fetchall()
+        cursor.execute('INSERT OR IGNORE INTO subscription (telegram_id, region, decode_keywords, keywords) '
+                       'VALUES (?, ?, ?, ?)',
+                       (tg_id, reg, dkw, kw))
 
-    for _ in item_list:
-        current_list.append(_[1])
-
-    for item in items:
-        if item not in current_list:
-            cursor.execute('INSERT OR IGNORE INTO notebook (nb_url) VALUES (?)',
-                           (item,))
-            new_items_list.append(item)
-
-    connection.commit()
-
-    return new_items_list
-
-
-def horse_tv_items_register(items: list) -> list:
-    tv_list = []
-    new_items_list = []
-
-    cursor.execute('SELECT * FROM tv', )
-    item_list = cursor.fetchall()
-
-    for _ in item_list:
-        tv_list.append(_[1])
-
-    for item in items:
-        if item not in tv_list:
-            cursor.execute('INSERT OR IGNORE INTO tv (tv_url) VALUES (?)',
-                           (item,))
-            new_items_list.append(item)
+    except sqlite3.IntegrityError as e:
+        print('subscription_register: ', e)
 
     connection.commit()
 
-    return new_items_list
 
-
-def coffee_items_register(items: list) -> list:
-    coffee_list = []
-    new_items_list = []
-
-    cursor.execute('SELECT * FROM coffee', )
-    item_list = cursor.fetchall()
-
-    for _ in item_list:
-        coffee_list.append(_[1])
-
-    for item in items:
-        if item not in coffee_list:
-            cursor.execute('INSERT OR IGNORE INTO coffee (item_url) VALUES (?)',
-                           (item,))
-            new_items_list.append(item)
+def item_register(url: str, tg_id: int) -> None:
+    """
+    Register or ignore existing item
+    :param url: item url
+    :param tg_id: telegram id
+    :return: None
+    """
+    cursor.execute(
+        'INSERT OR IGNORE INTO item (telegram_id, url) VALUES (?, ?)',
+        (tg_id, url,))
 
     connection.commit()
 
-    return new_items_list
+
+def send_subscriptions_handler():
+    """
+    :return: Dictionary with subscriptions {user(telegram id): subscriptions}
+    """
+    subscription_dict = {}
+
+    cursor.execute('SELECT tg_id FROM user')
+    users = cursor.fetchall()
+
+    for user in users:
+        subscription_dict.update({user[0]: []})
+        cursor.execute('SELECT * FROM subscription WHERE telegram_id = ?', (user[0],))
+        subscriptions = cursor.fetchall()
+        subscription_dict[user[0]] += subscriptions
+
+    return subscription_dict
+
+
+def items_checker(tg_id: int) -> list:
+    """
+    :return: user's items(all urls)
+    """
+    items_url_list = []
+
+    cursor.execute('SELECT (url) FROM item WHERE (telegram_id = ?)',
+                   (tg_id,))
+    items = cursor.fetchall()
+
+    try:
+        for _ in items:
+            items_url_list.append(_[0])
+    except Exception as e:
+        print('items_checker: ', e)
+
+    return items_url_list
+
+
+def get_subscriptions(tg_id: int) -> list:
+    """
+    :return: all user's subscriptions
+    """
+    try:
+        cursor.execute('SELECT * FROM subscription WHERE (telegram_id = ?)',
+                       (tg_id,))
+        subscription = cursor.fetchall()
+
+    except Exception as e:
+        print('get_subscriptions: ', e)
+
+    return subscription
+
+
+def delete_subscription(subscription_id: int) -> None | str:
+    """
+    Delete subscription
+    :return: None or exception
+    """
+    try:
+        cursor.execute('DELETE FROM subscription WHERE (id = ?)',
+                       (subscription_id,))
+        connection.commit()
+    except Exception as e:
+        print('delete_subscription: ', e)
+        return '504'
