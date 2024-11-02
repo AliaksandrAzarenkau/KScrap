@@ -13,13 +13,17 @@ def scrape_all(url):
     :param url: target url
     :return: JSON object
     """
-    r = requests.get(url)
+    try:
+        r = requests.get(url)
+    except requests.exceptions.ConnectionError as e:
+        print('Request to API error: ', e)
+        return []
 
     try:
         nb_response = r.json()
         return nb_response
     except Exception as e:
-        print(e)
+        print('JSON convertion error: ', e)
         return []
 
 
