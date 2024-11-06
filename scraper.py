@@ -3,7 +3,8 @@ import urllib.parse
 from langdetect import detect
 
 from scraper_cfg import SEARCH_URL, SEARCH_URL_POSTFIX, REGION_DICT
-from db_utils import subscription_register, item_register, send_subscriptions_handler, items_checker, get_subscriptions, delete_subscription
+from db_utils import (subscription_register, item_register, send_subscriptions_handler,
+                      items_checker, get_subscriptions, delete_subscription)
 
 
 def scrape_all(url):
@@ -123,7 +124,7 @@ def to_send_preparation():
             item_url_list = link_extractor(url)
 
             for link in item_url_list:
-                if link not in sent_items_link_list:
+                if link and link not in sent_items_link_list:
                     item_register(tg_id=k, url=link)
 
                     yield [k, link]
@@ -144,10 +145,10 @@ def link_extractor(url: str) -> list:
             link = ad['ad_link']
             item_list.append(link)
 
-        return item_list
-
     except Exception as e:
         print('link_extractor: ', e)
+
+    return item_list
 
 
 def subscriptions_list_handler(telegram_id: int) -> str | None:
