@@ -1,14 +1,13 @@
 import asyncio
 
-from telebot.async_telebot import AsyncTeleBot, asyncio_filters, types
+from telebot.async_telebot import AsyncTeleBot, asyncio_filters
 from telebot.asyncio_storage import StateMemoryStorage
 from telebot.states import State, StatesGroup
-from telebot.states.asyncio.context import StateContext
-from telebot.types import ReplyParameters
 
 from cfg import TG_TOKEN
-from db_utils import db_user_create, db_subscription_create, db_items_create, user_register
-from scraper import subscription_handler, to_send_preparation, subscriptions_list_handler, subscription_del
+from db_utils import db_user_create, db_items_create, user_register
+
+from scraper import to_send_preparation
 
 API_TOKEN = TG_TOKEN
 
@@ -26,83 +25,9 @@ async def send_welcome(message):
     """
     Start and register user(or ignore)
     """
-    await bot.reply_to(message,
-                       '*Формат запроса поиска: "город, ключевое слово(фраза)".*\nОбязательно через одну '
-                       'запятую после города\n*пример:* ***брест, гладильная доска*** или ***беларусь, '
-                       'блоки газосиликатные*** (на регистр пофиг)\n \n Доступные регионы: Областные центры, Беларусь\n'
-                       '\nДоступные команды: /start, /list, /del\n'
-                       'start - запуск, он же help\n list - список активных подписок \n del - удаление подписки',
-                       parse_mode='Markdown')
+    await bot.reply_to(message, 'Ok', parse_mode='Markdown')
     user_info = message.from_user.id
     user_register(user_info)
-
-
-@bot.message_handler(commands=['list'])
-async def get_subscription_list(message):
-    """
-    Add subscription if not exist
-    """
-    user_info = message.from_user.id
-    current_subscriptions = subscriptions_list_handler(user_info)
-
-    if current_subscriptions:
-        await bot.reply_to(message, current_subscriptions)
-
-    else:
-        await bot.reply_to(message, 'Нет активных подписок')
-
-
-@bot.message_handler(commands=['del'])
-async def delete_subscription_handler(message: types.Message, state: StateContext):
-    """
-    Delete subscription(start point of dialog chain
-    """
-    await state.set(MyStates.choice)
-
-    user_info = message.from_user.id
-    current_subscriptions = subscriptions_list_handler(user_info)
-
-    if current_subscriptions:
-        text = '\n Отправь номер подписки чтобы удалить (тупо цыфра)'
-        await bot.send_message(
-            user_info,
-            current_subscriptions + text,
-            reply_parameters=ReplyParameters(message_id=message.message_id))
-    else:
-        await bot.reply_to(message, 'Нет активных подписок')
-
-
-@bot.message_handler(state=MyStates.choice)
-async def delete_subscription(message: types.Message, state: StateContext):
-    """
-    Result of deleting subscription
-    """
-    text = message.text
-    result = ''
-
-    try:
-        choice = int(text)
-        result = subscription_del(message.from_user.id, choice)
-    except ValueError as e:
-        print('Delete error: ', e)
-
-    await bot.send_message(
-        message.from_user.id,
-        result,
-        reply_parameters=ReplyParameters(message_id=message.message_id))
-    await state.delete()
-
-
-@bot.message_handler(func=lambda message: True)
-async def add_subscription(message):
-    """
-    add subscription
-    """
-    user_info = message.from_user.id
-    message_text = message.text
-
-    result = await subscription_handler(message_text, user_info)
-    await bot.reply_to(message, result)
 
 
 @bot.message_handler(func=lambda message: True)
@@ -113,9 +38,8 @@ async def bot_send_items(message: str, user_info: int):
     await bot.send_message(text=message, chat_id=user_info)
 
 
-def on_startup(): # Create tables on startup if not exists
+def on_startup():  # Create tables on startup if not exists
     db_user_create()
-    db_subscription_create()
     db_items_create()
 
 
@@ -131,7 +55,7 @@ async def scraping_task():
 async def periodic():
     while True:
         await scraping_task()
-        await asyncio.sleep(60)
+        await asyncio.sleep(30)
 
 
 async def main():
