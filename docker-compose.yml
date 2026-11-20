@@ -1,0 +1,11 @@
+services:
+  db-writer:
+    build: .
+    container_name: sqlite-writer
+    restart: unless-stopped
+    # Запускаем от вашего пользователя Ubuntu, чтобы файл БД на сервере не стал собственностью root
+    user: "1000:1000"
+    environment:
+      - DB_PATH=/app/app.db
+    volumes:
+      - ./data:/app/

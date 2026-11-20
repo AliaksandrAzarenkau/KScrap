@@ -1,3 +1,5 @@
+import os
+
 # Parts target url
 SEARCH_URL = 'https://api.kufar.by/search-api/v2/search/rendered-paginated?cnd=1&lang=ru&ot=1&'
 SEARCH_URL_POSTFIX = '&size=43&sort=lst.d'
@@ -13,3 +15,6 @@ REGION_DICT = {
     'минск': 7,
     'беларусь': 0
 }
+
+# OS DB path
+DB_PATH = os.getenv("DB_PATH", "/app/app.db")

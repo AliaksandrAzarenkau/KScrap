@@ -1,7 +1,19 @@
 import sqlite3
 
+from scraper_cfg import DB_PATH
 
-connection = sqlite3.connect('database.db', check_same_thread=False)
+
+def get_connection():
+    """
+    timeout=30 защитит от кратковременных блокировок при параллельном доступе
+    """
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    # Режим WAL обязателен, если базу параллельно читает/пишет другой процесс на сервере
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
+
+
+connection = get_connection()
 cursor = connection.cursor()
 
 
