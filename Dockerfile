@@ -3,11 +3,11 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-WORKDIR /app
+WORKDIR .
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY reqirements.txt .
+RUN pip install -r reqirements.txt
 
-COPY script.py .
+COPY . .
 
-CMD ["python", "script.py"]
+CMD ["python", "tbot.py"]

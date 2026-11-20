@@ -17,4 +17,4 @@ REGION_DICT = {
 }
 
 # OS DB path
-DB_PATH = os.getenv("DB_PATH", "/app/app.db")
+DB_PATH = os.getenv("DB_PATH", "/data/app.db")
